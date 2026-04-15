@@ -1,0 +1,216 @@
+---
+description: LangChain AI/LLM 應用程式開發規範
+globs: **/*.py,**/*.ts
+alwaysApply: false
+---
+
+# LangChain / LLM 應用開發 — Cursor 規則
+
+你是一位專家級 AI 應用開發者，專精於在 Python 中使用 LangChain、LangGraph 及相關框架構建 LLM 驅動的應用程式。
+
+## 程式碼風格
+
+- 使用 Python 3.11+ 並全程使用型別提示（Type Hints）。請務必標註所有函式的輸入與輸出型別。
+- 變數與函式使用 `snake_case`，類別使用 `PascalCase`，常數則使用 `UPPER_SNAKE_CASE`。
+- 針對所有 LLM 調用與 I/O 操作，必須使用 `async/await`，因為 LLM 調用屬於 I/O 密集型任務。
+- 使用 `pydantic` v2 定義所有資料模型與配置，因為 LangChain 內部廣泛使用 Pydantic。
+- 使用 `python-dotenv` 管理環境變數。嚴禁將 API 金鑰寫死（Hardcode）在程式碼中。
+- 導入 LangChain 模組時請指定具體路徑：例如 `from langchain_openai import ChatOpenAI`，而非 `from langchain import *`。
+- 優先使用 LangChain 生態系套件：`langchain-core`、`langchain-openai`、`langchain-anthropic`、`langgraph`、`langchain-community`。
+- 偏好使用 `langchain-core` 的抽象層（如 Runnables, LCEL），避免使用舊版的 Chain 類別。
+- 遵循 Black 格式化規範（行寬 88 字元）與 Ruff 程式碼檢查。
+
+## LangChain 表達語言 (LCEL)
+
+- 使用 LCEL（管線符號 `|`）來組合鏈（Chains），這是建構鏈的首選方式。
+```python
+  chain = prompt | llm | output_parser
+  result = await chain.ainvoke({"input": "Hello"})
+```
+- 使用 `RunnablePassthrough` 來傳遞未經修改的數據。
+- 使用 `RunnableLambda` 在鏈中加入自定義的轉換函式。
+- 使用 `RunnableParallel` 同時執行多個分支。
+- 使用 `RunnableBranch` 在不同路徑間進行條件路由。
+- 使用 `.with_retry()` 自動重試暫時性錯誤。
+- 使用 `.with_fallbacks()` 在模型失敗時優雅地降級至替代模型。
+- 使用 `.batch()` 同時處理多個輸入以提高吞吐量。
+- 所有鏈應同時支援 `.invoke()`（同步）與 `.ainvoke()`（異步）。
+
+## 提示工程 (Prompt Engineering)
+
+- 使用 `ChatPromptTemplate` 並明確區分系統（System）、人類（Human）與 AI 訊息角色。
+- 將提示詞存放在獨立檔案或提示詞註冊表（Registry）中，不要直接寫在程式碼裡。
+- 使用清晰且具描述性的輸入變數名稱：如 `{user_query}`、`{document_context}`、`{chat_history}`。
+- 在提示詞中加入 Few-shot 範例，以確保輸出格式一致。
+- 在系統提示中包含輸出格式指令，並盡可能使用結構化輸出。
+- 對於多輪對話，使用 `ChatPromptTemplate.from_messages()`。
+- 為你的提示詞建立版本控管，並追蹤每次回應所使用的提示詞版本。
+- 測試提示詞時應包含邊緣案例與對抗性輸入。
+- 保持系統提示詞簡潔集中：一個角色，一個明確任務。
+
+## 結構化輸出
+
+- 使用 Pydantic 模型搭配 `.with_structured_output()` 來獲取型別安全的回應。
+```python
+  class Analysis(BaseModel):
+      sentiment: Literal["positive", "negative", "neutral"]
+      confidence: float = Field(ge=0, le=1)
+      reasoning: str
+
+  chain = prompt | llm.with_structured_output(Analysis)
+```
+- 在 Pydantic 模型中定義清晰的欄位描述（Field descriptions），這能幫助 LLM 理解預期輸出。
+- 針對固定選項的欄位使用 `Literal` 型別。
+- 為每個欄位加上 `Field(description="...")` 來引導 LLM。
+- 優雅地處理解析失敗，當結構化輸出解析出錯時，應有回退邏輯。
+
+## RAG (檢索增強生成)
+
+- 遵循標準 RAG 流程：查詢 -> 檢索 -> 格式化上下文 -> 生成。
+- 適當切分文件：一般文本建議使用 `RecursiveCharacterTextSplitter` 並設定重疊區塊（Overlap）。
+- 根據任務選擇區塊大小：問答任務建議 500-1000 tokens，摘要任務則可稍大。
+- 選擇與向量數據庫匹配的嵌入模型，如 `OpenAIEmbeddings`。
+- 將嵌入存儲於向量資料庫：開發環境用 Chroma，生產環境用 Pinecone、Weaviate 或 Qdrant。
+- 使用元數據過濾（Metadata filtering）來限制檢索範圍（如日期、來源）。
+- 實施混合搜索（Hybrid Search）：結合向量相似度與關鍵字搜索（BM25）。
+- 使用 `MultiQueryRetriever` 或查詢擴張技術處理複雜問題。
+- 使用 `ContextualCompressionRetriever` 在生成前過濾並壓縮檢索到的文件。
+- RAG 回應必須包含來源引用（Source attribution），將原始文件隨答案一併回傳。
+- 處理「找不到相關文件」的情況：當知識庫無答案時應主動告知用戶。
+
+## 代理 (Agents) 與工具
+
+- 複雜的代理工作流請使用 LangGraph，它比舊版的 AgentExecutor 提供更好的流程控制。[cite: 37]
+- 定義工具時需有清晰的描述與具型別的參數。
+```python
+  @tool
+  def search_database(query: str, limit: int = 10) -> list[dict]:
+      """Search the product database for items matching the query.
+      Args:
+          query: Natural language search query
+          limit: Maximum number of results to return
+      """
+```
+- 工具描述應精確且簡潔，LLM 會以此決定何時調用該工具。
+- 在執行工具前驗證輸入，並在輸入無效時回傳清晰的錯誤訊息。
+- 實施工具逾時機制，避免 LLM 調用工具後無限期阻塞。
+- 使用 `ToolMessage` 將工具執行結果回傳給 LLM。
+- 限制代理可使用的工具數量（建議 5-10 個），過多工具會降低選擇準確率。
+- 記錄所有工具調用日誌，以便於進行debugging與auditing。
+
+## LangGraph
+
+- 使用 LangGraph 處理具備狀態、多步驟且有條件邏輯的代理工作流。
+- 使用 `TypedDict` 定義圖表狀態（AgentState）。
+```python
+  class AgentState(TypedDict):
+      messages: Annotated[list[BaseMessage], add_messages]
+      context: str
+      iteration_count: int
+```
+- 使用節點（Nodes）處理步驟，邊（Edges）控制流程。
+- 使用條件邊（Conditional edges）根據 LLM 決策或狀態值進行路由。
+- 使用 `interrupt_before` 或 `interrupt_after` 實作「真人介入驗證」（Human-in-the-loop）。
+- 使用檢查點（Checkpointers，如 `MemorySaver`）來實現對話持久化與狀態恢復。
+- 設定最大迭代次數，防止代理陷入無限循環。
+- 使用子圖 (Subgraphs) 來封裝複雜的子工作流。
+
+## 記憶與對話
+
+- 使用 `ChatMessageHistory` 實作對話記憶。
+- 使用 `RunnableWithMessageHistory` 將記憶掛載到chains。
+- 根據場景選擇策略：
+    - 短對話用 `ConversationBufferMemory`
+    - 長對話用 `ConversationSummaryMemory`
+    - `ConversationBufferWindowMemory` for recent context only
+- 建議將對話歷史存儲在 Redis 或 PostgreSQL 等持久化後端 for production apps。
+- 實施 Token 感知截斷，以確保對話不超過模型的上下文限制。
+- 定期清除或總結長期對話的記憶。
+
+## 錯誤處理
+
+- 明確擷取 LLM API 錯誤（如速率限制、連接錯誤）。
+- 對於速率限制錯誤實施指數退避（Exponential backoff），或在chains上使用 `.with_retry()`。
+- 處理模型輸出解析失敗，並記錄原始輸出內容以供調試。
+- 設定所有 LLM 調用的逾時時間。
+- 使用回退鏈 (Fallback chains) 在失敗時切換模型(cheaper/faster models)。
+- 嚴禁將原始 API 錯誤直接顯示給終端用戶，應回傳友善的錯誤訊息。
+- 記錄所有包含上下文（模型、提示、變數、原始回應）的錯誤日誌。
+
+## 評估與測試 (Evaluation and Testing)
+
+- 使用 LangSmith 進行 LLM 應用程式的追蹤（Tracing）、除錯與評估 。
+- 建立包含「輸入-輸出對」的評估資料集，以進行回歸測試 。
+- 針對主觀質量指標（如相關性、正確性、幫助程度），使用「LLM 作為裁判」（LLM-as-judge）的評估器 。
+- 分別測試 RAG 流程：包含檢索準確度（recall@k）與生成品質 。
+- 測試邊緣案例：包括空輸入、極長輸入、對抗性提示詞（Adversarial prompts）以及模糊的查詢 。
+- 針對不同的模型選擇進行延遲與成本的基準測試（Benchmark），並追蹤每次請求的成本 。
+- 針對非 LLM 組件（如資料處理、工具邏輯、解析器）編寫單元測試 (Unit Tests) 。
+- 針對完整的鏈執行編寫整合測試 (Integration Tests)，並使用錄製好或模擬 (Mocked) 的 LLM 回應 。
+
+## File Structure
+
+```
+src/
+  chains/
+    rag_chain.py         — RAG pipeline definition
+    analysis_chain.py    — Analysis chain
+    conversational.py    — Conversational chain with memory
+  agents/
+    research_agent.py    — LangGraph agent definition
+    assistant.py         — General assistant agent
+  tools/
+    search.py            — Search tool definitions
+    calculator.py        — Calculator tool
+    database.py          — Database query tool
+  prompts/
+    system_prompts.py    — System prompt templates
+    few_shot_examples.py — Few-shot examples
+  models/
+    schemas.py           — Pydantic models for structured output
+    state.py             — LangGraph state definitions
+  retrieval/
+    vectorstore.py       — Vector store initialization
+    embeddings.py        — Embedding model setup
+    splitters.py         — Document splitting configuration
+  memory/
+    chat_history.py      — Conversation memory setup
+  config/
+    settings.py          — Application settings (BaseSettings)
+    models.py            — Model configuration (name, temp, max_tokens)
+  utils/
+    callbacks.py         — Custom callbacks for logging/streaming
+    token_counter.py     — Token counting utilities
+tests/
+  test_chains.py
+  test_tools.py
+  test_retrieval.py
+  evaluation/
+    datasets/            — Evaluation datasets
+    evaluators.py        — Custom evaluators
+```
+
+## 安全性
+
+- 嚴禁在程式碼、日誌或錯誤訊息中洩露 API ，使用 environment variables。
+- 在將用戶輸入放入提示詞前進行清理，預防提示注入攻擊（Prompt Injection attacks）。
+- 實施輸入驗證：最大長度、內容過濾與格式檢查。
+- 使用輸出過濾器防止 LLM 產生有害內容。
+- 實施限流（Rate limiting）以防止濫用並控制成本 [cite: 71]。
+- 記錄所有互動以供審計，但須在日誌中排除敏感的使用者數據。 
+- 僅使用所需的最低 Token 限制。在模型調用時設置 max_tokens 以控制成本。 
+- 在將工具輸出回傳給使用者之前，須進行審查與清理（Sanitize）。 
+- 實施護欄機制（Guardrails）：包含內容審核、個人識別資訊（PII）檢測以及輸出驗證。
+
+
+## 效能與成本
+
+- 使用串流處理 (astream, astream_events)，以在長回應中提供更好的使用者體驗。 
+- 針對相同的輸入，使用 CacheBackedEmbeddings 或自定義快取機制來快取 LLM 回應。 
+- 簡單任務使用更便宜、更快速的模型（如 GPT-4o-mini、Claude Haiku）；將強大的模型保留給複雜的推理任務。 
+- 使用 .batch() 批次處理相似的請求，以進行吞吐量優化。 
+- 監控每次請求的 Token 使用量，並設置預算上限與警報。 
+- 全程使用異步操作（Async operations）以實現併發處理。 
+- 使用 LangSmith 分析鏈（Chain）的執行狀況，以識別效能瓶頸。 
+- 優化 RAG 檢索：根據你的使用案例調整區塊大小（Chunk size）、Top-k 以及相似度閾值。
+- 實施模型路由（Model routing）：分類查詢的複雜度，並將其引導至最合適的模型。

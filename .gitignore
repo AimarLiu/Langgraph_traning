@@ -1,0 +1,52 @@
+# Python bytecode / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+bin/
+obj/
+publish/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Test / lint / type-check caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pytype/
+
+# Coverage reports
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# User-specific files
+.env
+.env.*
+!.env.example
+
+# LangGraph Sqlite checkpoint（階段 E）
+data/
+
+# Local logs / temp files
+*.log
+*.tmp
+*.temp
+
+# IDE / editor
+.idea/
+.vscode/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
