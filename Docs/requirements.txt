@@ -9,6 +9,7 @@ aiosignal==1.4.0
 annotated-types==0.7.0
 anyio==4.13.0
 attrs==26.1.0
+beautifulsoup4==4.14.3
 certifi==2026.2.25
 cffi==2.0.0
 charset-normalizer==3.4.7
@@ -35,6 +36,7 @@ jsonpointer==3.1.1
 langchain==1.2.14
 langchain-classic==1.0.3
 langchain-community==0.4.1
+langchain-chroma==1.1.0
 langchain-core==1.2.25
 langchain-google-genai==4.2.1
 langchain-openai==1.1.12
@@ -83,3 +85,4 @@ websockets==16.0
 xxhash==3.6.0
 yarl==1.23.0
 zstandard==0.25.0
+chromadb==1.5.7

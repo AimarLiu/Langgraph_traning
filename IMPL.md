@@ -727,6 +727,7 @@ py -3.11 -m pytest -q
 | README 導覽補強 | 新增 `Quick Start`、`Project Structure`、`How to Continue from Here`，提升 GitHub 首頁可用性 | `README.md` |
 | README Badge 區塊 | 新增 `Badges` 小節與 `Python CI` badge 範本連結（待替換 `<OWNER>/<REPO>`） | `README.md` |
 | CI Node 24 相容修正 | `actions/checkout` 升級 `v5`、`actions/setup-python` 升級 `v6`，並在 workflow 設定 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` | `.github/workflows/pytest.yml` |
+| CI 依賴補齊 | 補上 `langchain-chroma`、`chromadb`、`beautifulsoup4`，修正 pytest 收集階段 `ModuleNotFoundError: langchain_chroma` | `Docs/requirements.txt` |
 
 ### 程式碼要點
 
@@ -735,4 +736,5 @@ py -3.11 -m pytest -q
 - 增加快速啟動與路徑導覽，讓新進讀者可在不閱讀全部 TODO 的情況下快速開始與接續學習。
 - Badge 先用可複製的模板 URL，推上 GitHub 後替換 repo 路徑即可立即顯示 CI 狀態。
 - 針對 GitHub Actions Node 20 deprecation，已升級官方 action 版本並強制 Node 24 執行，降低政策切換期間的風險。
+- 測試檔會 import `practice_15_eval_smoke.py`，其匯入鏈會經過 RAG Chroma 模組；因此 CI 測試環境需安裝對應 RAG 依賴才能完成 test collection。
 
