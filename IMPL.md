@@ -726,6 +726,7 @@ py -3.11 -m pytest -q
 | A~P 課表整理 | 依 `TODO.md`、`TODO_phase2.md`、`TODO_phase3.md` 匯整 Phase A~P，保留每項 `[x]` / `[ ]` 進度勾選 | `README.md` |
 | README 導覽補強 | 新增 `Quick Start`、`Project Structure`、`How to Continue from Here`，提升 GitHub 首頁可用性 | `README.md` |
 | README Badge 區塊 | 新增 `Badges` 小節與 `Python CI` badge 範本連結（待替換 `<OWNER>/<REPO>`） | `README.md` |
+| CI Node 24 相容修正 | `actions/checkout` 升級 `v5`、`actions/setup-python` 升級 `v6`，並在 workflow 設定 `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` | `.github/workflows/pytest.yml` |
 
 ### 程式碼要點
 
@@ -733,4 +734,5 @@ py -3.11 -m pytest -q
 - 進度勾選與三份 TODO 保持一致，方便直接作為 GitHub 首頁的進度看板。
 - 增加快速啟動與路徑導覽，讓新進讀者可在不閱讀全部 TODO 的情況下快速開始與接續學習。
 - Badge 先用可複製的模板 URL，推上 GitHub 後替換 repo 路徑即可立即顯示 CI 狀態。
+- 針對 GitHub Actions Node 20 deprecation，已升級官方 action 版本並強制 Node 24 執行，降低政策切換期間的風險。
 

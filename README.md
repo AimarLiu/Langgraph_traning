@@ -2,9 +2,9 @@
 
 ## Badges
 
-> Replace `<OWNER>` and `<REPO>` with your GitHub repository path after push.
+> Replace `AimarLiu <OWNER>` and `Langgraph_traning <REPO>` with your GitHub repository path after push.
 
-[![Python CI](https://github.com/<OWNER>/<REPO>/actions/workflows/pytest.yml/badge.svg)](https://github.com/<OWNER>/<REPO>/actions/workflows/pytest.yml)
+[![Python CI](https://github.com/AimarLiu/Langgraph_traning/actions/workflows/pytest.yml/badge.svg)](https://github.com/AimarLiu/Langgraph_traning/actions/workflows/pytest.yml)
 
 This repository is a hands-on LangGraph training course that guides you from a minimal tool-using agent to a production-oriented agent system.  
 Through phased exercises, you will learn core agent patterns such as stateful graph design, tool-calling loops, checkpoint persistence, human-in-the-loop control, streaming, RAG integration, async execution, API deployment, and evaluation/regression workflows.
