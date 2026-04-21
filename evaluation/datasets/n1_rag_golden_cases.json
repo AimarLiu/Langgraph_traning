@@ -1,0 +1,62 @@
+[
+  {
+    "id": "n1-01",
+    "query": "What is reward hacking in reinforcement learning?",
+    "expected_retrieval_keywords": ["reward hacking", "reinforcement learning"],
+    "expected_answer_keywords": ["reward hacking", "specification", "objective"]
+  },
+  {
+    "id": "n1-02",
+    "query": "What is RLHF and why is it used for LLM alignment?",
+    "expected_retrieval_keywords": ["rlhf", "human feedback", "alignment"],
+    "expected_answer_keywords": ["human feedback", "alignment", "policy"]
+  },
+  {
+    "id": "n1-03",
+    "query": "Summarize the core architecture of LLM-powered autonomous agents.",
+    "expected_retrieval_keywords": ["autonomous agents", "llm", "architecture"],
+    "expected_answer_keywords": ["planning", "memory", "tool"]
+  },
+  {
+    "id": "n1-04",
+    "query": "What does prompt engineering aim to improve for large language models?",
+    "expected_retrieval_keywords": ["prompt", "engineering", "language model"],
+    "expected_answer_keywords": ["prompt", "instruction", "performance"]
+  },
+  {
+    "id": "n1-05",
+    "query": "Explain hallucination in LLMs and common mitigation ideas.",
+    "expected_retrieval_keywords": ["hallucination", "llm"],
+    "expected_answer_keywords": ["hallucination", "mitigation", "factual"]
+  },
+  {
+    "id": "n1-06",
+    "query": "How does retrieval augmented generation help reduce unsupported claims?",
+    "expected_retrieval_keywords": ["retrieval", "generation", "rag"],
+    "expected_answer_keywords": ["retrieval", "evidence", "grounded"]
+  },
+  {
+    "id": "n1-07",
+    "query": "What is the role of memory in agent systems?",
+    "expected_retrieval_keywords": ["memory", "agent"],
+    "expected_answer_keywords": ["memory", "context", "long-term"]
+  },
+  {
+    "id": "n1-08",
+    "query": "How do tools and external APIs improve an LLM agent?",
+    "expected_retrieval_keywords": ["tool", "api", "agent"],
+    "expected_answer_keywords": ["tool", "api", "capability"]
+  },
+  {
+    "id": "n1-09",
+    "query": "Why can pure chain-of-thought style reasoning still fail on hard tasks?",
+    "expected_retrieval_keywords": ["reasoning", "chain of thought"],
+    "expected_answer_keywords": ["reasoning", "failure", "verification"]
+  },
+  {
+    "id": "n1-10",
+    "query": "What are common safety concerns when deploying LLM agents?",
+    "expected_retrieval_keywords": ["safety", "agent", "llm"],
+    "expected_answer_keywords": ["safety", "risk", "guardrail"]
+  }
+]

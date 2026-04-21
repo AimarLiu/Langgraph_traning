@@ -40,9 +40,37 @@
 
 ### 階段 N：RAG 管線加深（擇一主線）
 
-- [ ] **N1** 在現有 Chroma 流程上加上 rerank 或 hybrid 其中一種。  
+- [x] **N1** 在現有 Chroma 流程上加上 rerank 或 hybrid 其中一種。  
 - [ ] **N2**（選修）查詢改寫／Multi-query。  
 - [ ] **N3** 維持可追溯依據。  
+
+#### N1 可落地 Pipeline（建議先 Hybrid 再 Rerank）
+
+- [x] **N1-P1 檢索召回層（Hybrid）**：並行執行 `keyword(BM25)` 與 `vector(Chroma)`，各取 `top_k=10`。  
+- [x] **N1-P2 去重與分數合併**：以 `doc_id/source+chunk_index` 去重，保留每篇文件的兩種原始分數。  
+- [x] **N1-P3 混合排序**：做 min-max normalize 後加權排序（初始 `vector=0.6`、`keyword=0.4`），取 `top_n=20`。  
+- [x] **N1-P4 精排層（Rerank）**：對 `top_n=20` 做 rerank，輸出 `rerank_score`，再取 `final_top_k=5`。  
+- [x] **N1-P5 生成與引用 (citations 保留)**：只餵 `final_top_k` 進 LLM，輸出答案時保留 citations（來源、段落、分數）。  
+- [x] **N1-P6 可觀測性**：在 log/trace 保留 `query -> retrieve -> hybrid_score -> rerank_score -> final_docs`。  
+- [x] **N1-P7 驗收指標**：至少用 5~10 題 golden set 比較「baseline vector-only」vs「hybrid+rerank」的命中率與答案品質。  
+
+##### N1-Pipeline 建議對應檔案
+
+- [x] `src/langgraph_learning/tools/rag_lilian.py`：加入 hybrid merge + normalize + rerank 入口。  
+- [x] `practice_16_rag_advanced_smoke.py`：增加 baseline / hybrid / hybrid+rerank 三種模式 smoke 比對。  
+- [x] `TODO_phase3.md`：完成後勾選 N1 與 N1-P1~P7。  
+
+#### N-CRAG-path（修正型檢索分支）
+
+- [ ] **NC1** 加入「檢索品質判斷節點」（如：top-k 分數門檻、來源覆蓋率）。  
+- [ ] **NC2** 判斷不通過時啟動 corrective loop（query rewrite 或 fallback 檢索）。  
+- [ ] **NC3** 輸出保留「初次檢索 vs 修正後檢索」對照摘要，便於回歸檢查。  
+
+#### N-Adaptive-path（動態路由分支）
+
+- [ ] **NA1** 新增問題路由節點（`direct` / `basic_rag` / `deep_rag`）。  
+- [ ] **NA2** `deep_rag` 路徑套用 multi-query 或 rerank，其他路徑維持較低成本。  
+- [ ] **NA3** 統一各路徑輸出欄位（answer / citations / route），方便評測比較。  
 
 ### 階段 O：督導與多能力組合（輕量 multi-agent）
 

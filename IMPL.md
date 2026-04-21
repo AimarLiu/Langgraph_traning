@@ -738,3 +738,86 @@ py -3.11 -m pytest -q
 - 針對 GitHub Actions Node 20 deprecation，已升級官方 action 版本並強制 Node 24 執行，降低政策切換期間的風險。
 - 測試檔會 import `practice_15_eval_smoke.py`，其匯入鏈會經過 RAG Chroma 模組；因此 CI 測試環境需安裝對應 RAG 依賴才能完成 test collection。
 
+---
+
+## Phase：學習筆記補充（C-RAG vs Adaptive-RAG）
+
+### 實作內容
+
+| 項目 | 說明 | 檔案路徑 |
+|------|------|----------|
+| 學習筆記：C-RAG 與 Adaptive-RAG 差異 | 說明兩者核心目標、流程辨識點，並對照目前 N 階段定位為進階 RAG 組件；附最小可落地實作建議 | `LessonLearn/what_is_different_between_CRag_Adaptive_Rag.md` |
+
+### 程式碼要點
+
+- C-RAG 重點是「檢索品質評估 + 補救閉環」。
+- Adaptive-RAG 重點是「問題路由 + 動態策略選擇」。
+- 目前 N 階段可視為兩者的前置組件（rerank/hybrid、rewrite/multi-query、traceability）。
+
+---
+
+## Phase：課表補強（N 階段新增雙分支）
+
+### 實作內容
+
+| 項目 | 說明 | 檔案路徑 |
+|------|------|----------|
+| N-CRAG-path | 在 N 階段新增 NC1~NC3：檢索品質判斷、corrective loop、初次/修正檢索對照摘要 | `TODO_phase3.md` |
+| N-Adaptive-path | 在 N 階段新增 NA1~NA3：問題路由、分層檢索強度、統一輸出欄位便於評測 | `TODO_phase3.md` |
+
+### 程式碼要點
+
+- N 階段由「進階 RAG 組件」擴展為兩條可落地主線：C-RAG（修正閉環）與 Adaptive-RAG（動態路由）。
+- 每條分支都維持 checklist 形式，方便直接勾選與回寫實作進度。
+
+---
+
+## Phase：學習筆記與課表補充（rerank / hybrid）
+
+### 實作內容
+
+| 項目 | 說明 | 檔案路徑 |
+|------|------|----------|
+| 學習筆記：rerank 與 hybrid 差異 | 說明兩者定位（召回 vs 精排）、典型流程、優缺點與最小可行參數建議 | `LessonLearn/what_is_rerand_and_hybrid.md` |
+| N1 可落地 pipeline | 在 N 階段新增 N1-P1~N1-P7：Hybrid 檢索、去重與混合排序、Rerank 精排、引用輸出、可觀測性與驗收指標 | `TODO_phase3.md` |
+| N1 檔案落點建議 | 補上 `rag_lilian.py` 與 `practice_16_rag_advanced_smoke.py` 的實作對應，方便後續直接落地 | `TODO_phase3.md` |
+
+### 程式碼要點
+
+- `hybrid` 聚焦召回覆蓋（keyword + vector），`rerank` 聚焦前段結果品質（query-doc 重打分）。
+- 實作順序建議先 Hybrid 再 Rerank，可先改善漏召回，再提升最終回答精度。
+- N1 pipeline 明確拆分為可勾選步驟，便於與 M 階段評測（golden set）連動驗收。
+
+---
+
+## Phase：第三課表 N1（Hybrid 檢索 P1~P3）
+
+### 實作內容
+
+| 項目 | 說明 | 檔案路徑 |
+|------|------|----------|
+| **N1-P1 檢索召回層（Hybrid）** | 同一 query 同時做 keyword(BM25) 與 vector(Chroma) 檢索，各取 top_k（預設 10） | `src/langgraph_learning/tools/hybrid_lilian_chroma.py` |
+| **N1-P2 去重與分數合併** | 以 `source + slug + xxhash(page_content)` 組合成 doc key 去重；保留 `keyword_raw` / `vector_raw` | `src/langgraph_learning/tools/hybrid_lilian_chroma.py` |
+| **N1-P3 混合排序** | 兩路分數做 min-max normalize 後加權（預設 vector=0.6、keyword=0.4），排序取 top_n（預設 20） | `src/langgraph_learning/tools/hybrid_lilian_chroma.py` |
+| **N1-P4 精排（Rerank，選用）** | 對 hybrid/vector 候選做逐篇 pointwise 打分（Gemini structured output），再取 `final_top_k` | `src/langgraph_learning/tools/rerank_lilian.py` |
+| **N1-P5 生成與引用（選用）** | 只用 `final_top_k` evidence 產生答案，並輸出 citations（含 snippet + scores） | `src/langgraph_learning/tools/lilian_rag_finalize.py` |
+| **BM25 最小召回模組** | tokenize + 建 BM25 index + top-k；可被 hybrid 重用，也可單獨呼叫 | `src/langgraph_learning/tools/bm25_keyword.py` |
+| **LangChain `@tool` 包裝** | `search_lilian_weng_knowledge`：vector-only / hybrid +（選用）rerank +（選用）finalize 的對外介面 | `src/langgraph_learning/tools/rag_lilian.py` |
+| smoke 入口 | 直接呼叫工具的 hybrid 模式，輸出含 `hybrid_score/vec_norm/kw_norm` 的片段列表，便於 review | `practice_16_rag_advanced_smoke.py` |
+
+### 程式碼要點
+
+- 工具介面維持相容：`search_lilian_weng_knowledge(query, top_k=4)` 預設仍是 vector-only；改用 `mode="hybrid"` 才會走 N1-P1~P3。
+- Chroma 的 `similarity_search_with_score` 多數情境回傳「距離」（越小越相近），此處轉成 `vector_raw = -distance` 以便統一成「越大越好」再做 normalize。
+- hybrid 結果會把 `keyword_raw/vector_raw/keyword_norm/vector_norm/hybrid_score` 注入到 `doc.metadata`，並在輸出 header 顯示（不影響 J3 的 `[n]/title/slug/source` 引用對照）。
+- N1-P1~P3 的核心邏輯已抽到 `hybrid_lilian_chroma.py`；BM25 相關抽到 `bm25_keyword.py`，`rag_lilian.py` 主要負責工具輸出格式與錯誤處理。
+- N1-P4 rerank **預設關閉**：可用 `.env` 的 `LILIAN_RERANK_ENABLED=true` 或工具參數 `rerank=true` 啟用（工具參數優先）；模型可用 `LILIAN_RERANK_MODEL` 或 `rerank_model` 指定。
+- N1-P5 finalize **預設關閉**：工具參數 `finalize_answer=true` 時，會在取回 `final_top_k` evidence 後再呼叫一次答案模型；模型可用 `LILIAN_ANSWER_MODEL` 或 `answer_model` 指定。
+
+### 使用範例
+
+```powershell
+# 先確保已建立 Chroma（J1），再跑 hybrid smoke
+py -3.11 practice_16_rag_advanced_smoke.py
+```
+
