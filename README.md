@@ -113,7 +113,7 @@ py -3.11 practice_15_eval_smoke.py
 - [x] **M3** Run smoke checks via pytest or script.
 
 ### Phase N: Advanced RAG Pipeline (Choose One Main Track)
-- [ ] **N1** Add reranking or hybrid retrieval to the current Chroma flow.
+- [x] **N1** Add reranking or hybrid retrieval to the current Chroma flow.
 - [ ] **N2** (Optional) Add query rewriting / multi-query.
 - [ ] **N3** Keep answer traceability/grounding.
 
